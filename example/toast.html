@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      h3, p {
+        margin: 5px 0;
+      }
+      /* Outside styles always win! */
+      custom-toast {
+        /* background-color: #a6a; */
+        --close-color: blue;
+      }
+
+      /* But it doesn't apply inside the component */
+      custom-toast .btn-close {
+        color: red;
+      }
+
+      /* Style it when it is not defined */
+      custom-toast:not(:defined) {
+        display: inline-block;
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body class="dark-theme">
+
+    <button onClick="toggleTheme()">Toggle theme</button>
+
+    <template id="toast-template">
+      <style>
+        :host {
+          display: flex;
+          position: absolute;
+          background: #e2e2e2;
+          border: 2px solid #777;
+          border-radius: 8px;
+          left: 15px;
+          right: 15px;
+          bottom: 40px;
+          justify-content: space-around;
+          padding: 15px 20px;
+          align-items: center;
+          font-family: 'Lucida Sans', sans-serif;
+          transition: opacity 0.3s ease-in-out;
+        }
+
+        :host([layout="col"]) {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        :host-context(.dark-theme) {
+          background: #232323;
+          color: #fff;
+        }
+
+        #slotTitle::slotted(h3) {
+          font-family: Times New Roman;
+        }
+
+        .btn-close {
+          position: absolute;
+          top: 8px;
+          right: 10px;
+          font-weight: bold;
+          /* color: var(--close-color, inherit); */
+        }
+
+        .btn-layout {
+          position: absolute;
+          bottom: -25px;
+          right: 5px;
+          color: green;
+        }
+      </style>
+      <slot id="slotTitle" name="title"></slot>
+      <slot name="message"></slot>
+      <span class="btn btn-close" role="button">X</span>
+      <span class="btn btn-layout">toggle layout</span>
+    </template>
+
+    <custom-toast layout="col">
+      <h3 slot="title">Warning</h3>
+      <p slot="message">Your session expired!</p>
+    </custom-toast>
+
+    <script>
+
+      customElements.whenDefined('custom-toast').then(() => {
+        console.log('custom-toast defined')
+      })
+
+      class Toast extends HTMLElement {
+        static get observedAttributes() {
+          return ["layout"];
+        }
+
+        constructor() {
+          super();
+
+          this.attachShadow({ mode: "open" });
+          const tpl = document.querySelector("#toast-template");
+          this.shadowRoot.appendChild(tpl.content.cloneNode(true));
+          this.btnClose = this.shadowRoot.querySelector(".btn-close");
+          this.btnLayout = this.shadowRoot.querySelector(".btn-layout");
+          this._onToastClose = this._onToastClose.bind(this);
+          this._onSwitchLayout = this._onSwitchLayout.bind(this);
+        }
+
+        connectedCallback() {
+          console.log("Toast connected");
+          this.btnClose.addEventListener("click", this._onToastClose);
+          this.btnLayout.addEventListener("click", this._onSwitchLayout);
+        }
+
+        disconnectedCallback() {
+          console.log("Toast disconnected");
+          this.btnClose.removeEventListener("click", this._onToastClose);
+          this.btnLayout.removeEventListener("click", this._onSwitchLayout);
+        }
+
+        attributeChangedCallback(attrName, oldVal, newVal) {
+          console.log("attributeChangedCallback", attrName, oldVal, newVal);
+        }
+
+        _onToastClose(e) {
+          e.preventDefault();
+          this.shadowRoot.host.remove();
+        }
+
+        _onSwitchLayout(e) {
+          e.preventDefault();
+          this.layout = this.layout ? '' : 'col'
+        }
+
+        set layout(value) {
+          if (Boolean(value)) this.setAttribute("layout", value);
+          else this.removeAttribute("layout");
+        }
+
+        get layout() {
+          return this.hasAttribute("layout");
+        }
+      }
+
+      customElements.define("custom-toast", Toast);
+
+      // List still not defined elements
+      // console.log(document.querySelectorAll(':not(:defined)'))
+
+      // setTimeout(() => {
+      //   customElements.define("custom-toast", Toast);
+      // }, 3000)
+
+      function toggleTheme() {
+        const prevClass = document.body.className
+        document.body.className = prevClass ? '' : 'dark-theme'
+      }
+    </script>
+  </body>
+</html>
